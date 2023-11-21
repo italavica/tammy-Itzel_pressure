@@ -91,7 +91,7 @@ function handleRegularData(data) {
           display_zz.push(data[i].y2);
           // Similarly for display arrays of dyy, dzz
 
-          // Ensure display arrays don't exceed 100 elements
+          // Ensure display arrays don't exceed 1000 elements
           if (display_xx.length > 1000) {
             display_xx.shift();
             display_yy.shift();
@@ -125,7 +125,7 @@ function handleCollectedData(data)
         display_dyy.push(data[i].dy1);
         display_dzz.push(data[i].dy2);
 
-                  // Ensure display arrays don't exceed 100 elements
+                  // Ensure display arrays don't exceed 1000 elements
             if (display_dxx.length > 1000) {
             display_dxx.shift();
             display_dyy.shift();

@@ -12,7 +12,7 @@ from scipy.signal import butter, filtfilt
 import json
 import numpy as np
 import pandas as pd
-
+from peak_detection import R_peak_detect
 
 def read_data(file_name):
     data_list = []
@@ -195,24 +195,63 @@ async def server_logic(websocket, path):
                 data_y1.append(y1_point)
                 data_y2.append(y2_point)
 
+
                 if len(data_x) >= max_collect_points:
 
 
-                    
-                    
-
                     window_size = 10
+                    print(type)
                     signal1_series = pd.Series(data_y1)
                     smoothed_wave1 = signal1_series.rolling(window=window_size,min_periods=1).mean()
                     smoothed_wave1 = smoothed_wave1.values
+                    peak1 = R_peak_detect(-smoothed_wave1,20,plot=False)
+                    print('peaks:',peak1)
 
-                    signal1_series = pd.Series(data_y2)
-                    smoothed_wave2 = signal1_series.rolling(window=window_size,min_periods=1).mean()
+                    signal2_series = pd.Series(data_y2)
+                    # peak2 = R_peak_detect(signal2_series,20,plot=False)
+                    smoothed_wave2 = signal2_series.rolling(window=window_size,min_periods=1).mean()
                     smoothed_wave2 = smoothed_wave2.values
+                    peak2 = R_peak_detect(-smoothed_wave2,20,plot=False)
+                    print('peaks:',peak2)
 
+                    index1=0
+                    index2=0
+                    procesed_data=0
                     for j in range(0,len(data_x)):
-                        dd = {'x': str(data_x[j]), 'dy1':str(smoothed_wave1[j]),'dy2':str(smoothed_wave2[j])}
-                        collected_data.append(dd)
+
+
+                        # if  index2 == len(peak2):
+                        #         dd = {'x': str(data_x[j]), 'dy1':str(smoothed_wave1[j]),'dy2':str(smoothed_wave2[j])}
+                        #         collected_data.append(dd)
+                        #         # procesed_data+=1
+                        # elif  index1 == len(peak1):
+                        #         dd = {'x': str(data_x[j]), 'dy1':str(smoothed_wave1[j]),'dy2':str(smoothed_wave2[j])}
+                        #         collected_data.append(dd)
+                        #         # procesed_data+=1
+
+                        
+                        if index2 != len(peak2) and index1 != len(peak1):
+                            # if smoothed_wave1[peak1[index1]]==smoothed_wave1[j] and peak1[index1]==j:
+                            if peak1[index1]==j:                               
+                                dd = {'x': str(data_x[j]), 'dy1':str(smoothed_wave1[j]),'dy2':str(smoothed_wave2[j]),'py1':str(peak1[index1])}
+                                collected_data.append(dd)
+                                procesed_data+=1
+                                index1+=1
+
+                            # if smoothed_wave2[peak2[index2]]==smoothed_wave2[j] and peak2[index2]==j:
+                            if peak2[index2]==j:                             
+                                dd = {'x': str(data_x[j]), 'dy1':str(smoothed_wave1[j]),'dy2':str(smoothed_wave2[j]),'py2':str(peak2[index2])}
+                                collected_data.append(dd)
+                                procesed_data+=1
+                                index2+=1
+
+                            else:
+                                dd = {'x': str(data_x[j]), 'dy1':str(smoothed_wave1[j]),'dy2':str(smoothed_wave2[j])}
+                                collected_data.append(dd)
+                                procesed_data+=1
+                    print(procesed_data)
+
+
                     data_x = []
                     data_y1 = []
                     data_y2 = []
@@ -220,8 +259,8 @@ async def server_logic(websocket, path):
                     collected_data_json = json.dumps({'type': 'collected', 'data': collected_data})
                     await websocket.send(collected_data_json)  
                     
-                    print(collected_data)
-                    print(len(collected_data))
+                    # print(collected_data)
+                    # print(len(collected_data))
                     collect_data = False  # Reset flag
                     collected_data = []  # Reset collected data
         
