@@ -1,33 +1,59 @@
 <!DOCTYPE html>
 <head>
   <style> 
-  textarea {
-    width: 100%;
-    height: 150px;
-    padding: 12px 20px;
-    box-sizing: border-box;
-    border: 2px solid #ccc;
-    border-radius: 4px;
-    background-color: #f8f8f8;
-    font-size: 16px;
-    resize: none;
-  }
-  .btn-group .button {
-  background-color: #808080; 
-  border: none;
-  color: white;
-  padding: 15px 32px;
-  text-align: center;
-  text-decoration: none;
-  display: inline-block;
-  font-size: 16px;
-  cursor: pointer;
-  float: left;
-}
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
 
-.btn-group .button:hover {
-  background-color: #A9A9A9;
-}
+    .container {
+      width: 90%;
+      margin: auto;
+      overflow: hidden;
+    }
+
+    textarea {
+      width: 100%;
+      height: 150px;
+      padding: 12px 20px;
+      margin-bottom: 20px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background-color: #fff;
+      font-size: 16px;
+      resize: none;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+
+    .btn-group .button {
+      background-color: #4CAF50; 
+      border: none;
+      color: white;
+      padding: 10px 20px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 5px;
+      margin-right: 10px;
+      transition: background-color 0.3s;
+    }
+
+    .btn-group .button:hover {
+      background-color: #45a049;
+    }
+
+    #graph, #graph2, #graph3 {
+      margin-top: 20px;
+      background-color: #fff;
+      padding: 10px;
+      border-radius: 4px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
   </style>
   </head>
 <meta charset="utf-8"/>
@@ -41,20 +67,100 @@
   const portnum = 8001;
   var websock;
   var host, server, connected = false;
-  xx=[];
-  peak_x1 = [];
-  peak_x2 = [];
-  yy=[];
-  zz =[];
-  dyy = [];
-  dzz = [];
-  peak1 = [];
-  peak2 = [];
-  ptt =[];
+  let shouldUpdate = true;
   cnt = 0;
   j = 0;
   i = 0;
 
+
+function handleRegularData(data) {  
+  if (shouldUpdate) {
+
+      for (i = 0; i < data.length; i++) {
+          // Add new data to complete dataset arrays
+          // display(payload.type)
+          // display('\n')
+          xx.push(data[i].x);
+          yy.push(data[i].y1);
+          zz.push(data[i].y2);
+          // Similarly for dyy, dzz if you use them
+
+          // Add new data to display arrays
+          display_xx.push(data[i].x);
+          display_yy.push(data[i].y1);
+          display_zz.push(data[i].y2);
+          // Similarly for display arrays of dyy, dzz
+
+          // Ensure display arrays don't exceed 100 elements
+          if (display_xx.length > 1000) {
+            display_xx.shift();
+            display_yy.shift();
+            display_zz.shift();
+          }
+      }
+
+    // Update the plot with the new data
+    Plotly.update('graph', {x: [display_xx], y: [display_yy, display_zz]});
+      }
+}
+
+
+function handleCollectedData(data)
+  {     
+    display('\n');
+    display('Processed ');
+    display(data.length);
+    display(' data');
+    display('\n');
+  if (shouldUpdate) {
+    for (i = 0; i < data.length; i++) {
+        dxx.push(data[i].x);
+        dyy.push(data[i].dy1);
+        dzz.push(data[i].dy2);
+
+
+
+              // Add new data to display arrays
+        display_dxx.push(data[i].x);
+        display_dyy.push(data[i].dy1);
+        display_dzz.push(data[i].dy2);
+
+                  // Ensure display arrays don't exceed 100 elements
+            if (display_dxx.length > 1000) {
+            display_dxx.shift();
+            display_dyy.shift();
+            display_dzz.shift();
+          }
+}
+// Update the plot with the new data
+Plotly.update('collectedDataGraph', {x: [display_dxx], y: [display_dyy, display_dzz]});
+}
+}
+
+
+
+    // Display the given text
+  function array_init()
+  {
+    xx=[];
+    peak_x1 = [];
+    peak_x2 = [];
+    yy=[];
+    zz =[];
+    dxx = [];
+    dyy = [];
+    dzz = [];
+    peak1 = [];
+    peak2 = [];
+    ptt =[];
+    display_xx = [];
+    display_yy = [];
+    display_zz = [];
+    display_dxx = [];
+    display_dyy = [];
+    display_dzz = [];
+    
+  }
 
   // Display the given text
   function display(s)
@@ -70,6 +176,7 @@
     host = host.replace("127.0.0.1", "localhost");
     server = host.replace(/:\d*\b/, ":" + portnum);
     document.myform.text.value = "Host " + host + "\n";
+
     // window.setInterval(timer_tick, 1000);
   }
 
@@ -83,33 +190,67 @@
     websock.onopen    = function(evt) {sock_open(evt)};
     websock.onclose   = function(evt) {sock_close(evt)};
     websock.onerror   = function(evt) {sock_error(evt)};
+    array_init();
+    // shouldUpdate = true;
+    cnt = 0;
     connected = true;
   }
   // Close a Websocket connection
   function disconnect()
   {
-    websock.send('stop');
+    websock.send('disconnect');
     connected = false;
-    display("\ndisconnected\n");
+    // display("\nDisconnected\n");
+    window.addEventListener("load", init, false);
     websock.close();
   }
 
 
-  function start()
+
+  function start() {
+    if (cnt === 0) {
+        // Initial setup - only done once
+        websock.send('start');
+        
+        // Initialize the Plotly graph
+        Plotly.newPlot('graph', data, layout);
+        // Initialize other graphs as needed
+
+        // Set the WebSocket message handler
+        websock.onmessage = function(evt) {
+            let payload = JSON.parse(evt.data);
+
+            if (payload.type === 'regular') {
+                handleRegularData(payload.data);
+            } else if (payload.type === 'collected') {
+                handleCollectedData(payload.data);
+            }
+            // Additional handlers for other message types can be added here
+        };
+
+        // Update the control variable
+        cnt++;
+        shouldUpdate = true;
+    } else {
+        // This block will execute on subsequent calls of start()
+        // Reset the data arrays if needed
+        array_init();
+        shouldUpdate = true;
+    }
+}
+
+  
+  function stop()
   {
-    websock.send('start');
-    // Plotly.newPlot('graph', [my_plot,my_plot1],layout);
-    Plotly.newPlot('graph', data, layout);
-    Plotly.newPlot('graph2', data2, layout2);
-    Plotly.newPlot('graph3', data3, layout3);
-    websock.onmessage = function(evt) {sock_message(evt)};
+    websock.send('stop');
+    shouldUpdate = false;
   }
 
 
   var trace1 = {
   x: [1, 2, 3],
   y: [40, 50, 60],
-  name: 'Wrist Signal',
+  name: 'FBG1',
   type: 'scatter',
   yaxis: 'y' // This trace follows the left y-axis
 };
@@ -117,7 +258,23 @@
 var trace2 = {
   x: [2, 3, 4],
   y: [4, 5, 6],
-  name: 'Elbow Signal',
+  name: 'FBG2',
+  yaxis: 'y2',
+  type: 'scatter'
+};
+
+var trace_pr1 = {
+  x: [],
+  y: [],
+  name: 'FBG1',
+  type: 'scatter',
+  yaxis: 'y' // This trace follows the left y-axis
+};
+
+var trace_pr2 = {
+  x: [],
+  y: [],
+  name: 'FBG2',
   yaxis: 'y2',
   type: 'scatter'
 };
@@ -148,6 +305,7 @@ var ptt0 = {
 
 
 var data = [trace1, trace2];
+var proc_data = [trace_pr1, trace_pr2];
 var data2 = [trace1, trace2, trace_p1, trace_p2];
 var data3 = [ptt0];
 
@@ -164,7 +322,7 @@ var layout = {
 };
 
 var layout2 = {
-  title: 'Second Derivative',
+  title: 'Processed Data',
   yaxis: {title: 'FBG1'},
   yaxis2: {
     title: 'FBG2',
@@ -180,39 +338,6 @@ var layout3 = {
   yaxis: {title: 'PTT'}
 }
 
-  // Display incoming data
-  function sock_message(evt) {
-  // display(evt.data);
-  
-  data = JSON.parse(evt.data);
-  const dictionary = data[9];
-  const keyToCheck = 'p1';
-
-  // Assuming data is an object with x and y values
-  // Update the existing arrays with new data
-  for (i = 0; i <data.length; i++){
-  xx.push(data[i].x);
-  yy.push(data[i].y1);
-  zz.push(data[i].y2);
-  dyy.push(data[i].dy1);
-  dzz.push(data[i].dy2);
-  }
-
-
-if (dictionary.hasOwnProperty(keyToCheck)) {
-  peak_x1.push(data[(data.length)-1].px1)
-  peak_x2.push(data[(data.length)-1].px2)
-  peak1.push(data[(data.length)-1].p1);
-  peak2.push(data[(data.length)-1].p2);
-  ptt.push(data[(data.length)-1].time);
-}
-
-
-  // Update the plot with the new data
-  Plotly.update('graph', {x: [xx], y: [yy,zz],layout});
-  Plotly.update('graph2', {x: [xx,xx,peak_x1, peak_x2], y: [dyy,dzz,peak1,peak2],layout2});
-  Plotly.update('graph3', {x: [i+1], y: [ptt],layout3});
-}
 
   // Handlers for other Websocket events
   function sock_open(evt)
@@ -286,25 +411,44 @@ if (dictionary.hasOwnProperty(keyToCheck)) {
 
  }
 
+ function collectData() {
+
+    websock.send('collect');
+    Plotly.newPlot('collectedDataGraph', proc_data, layout2);
+    // websock.send('stop');
+    //shouldUpdate = false;  
+    display('Processing data...')
+    // sock_message_collect(evt)
+   
+  }
   // Do initialisation when page is loaded
   window.addEventListener("load", init, false);
 
 </script>
-<form name="myform">
-  <h2 style=" font-family: Arial;">WebSocket FBG Measurement</h2>
-  <p>
-  <textarea name="text" rows="10" cols="100">
-  </textarea>
-  </p>
-  <p>
-  <input type="button" value="Connect" onClick="connect();">
-  <input type="button" value="Disconnect" onClick="disconnect();">
-  <input type="button" value="Start" onClick="start();">
-  <button class="delayed" onclick="download_wavelength(xx,yy,zz,dyy,dzz)"> Download FBG Signals </button>
-  <button class="delayed" onclick="download_PTT(peak_x1,peak1,peak_x2,peak2,ptt)"> Download PTT Signals </button>
-  </p>
-</form>
-<div id="graph" style=></div>
-<div id="graph2" style=></div>
-<div id="graph3" style=></div>
+<body>
+  <div class="container">
+    <form name="myform">
+      <h2>WebSocket FBG Measurement</h2>
+      <textarea name="text"></textarea>
+      <div class="btn-group">
+        <input type="button" class="button" value="Connect" onClick="connect();">
+        <input type="button" class="button" value="Disconnect" onClick="disconnect();">
+        <input type="button" class="button" value="Start" onClick="start();">
+        <input type="button" class="button" value="Stop" onClick="stop();">
+        <input type="button" class="button" value="Process Data" onClick="collectData();">
+        <button class="button delayed" onclick="download_wavelength(xx,yy,zz,dyy,dzz)"> Download FBG Signals </button>
+        <button class="button delayed" onclick="download_PTT(peak_x1,peak1,peak_x2,peak2,ptt)"> Download PTT Signals </button>
+      </div>
+    </form>
+    <div id="graph"></div>
+    <div id="collectedDataGraph"></div>
+    <!-- <div id="graph2"></div>
+    <div id="graph3"></div> -->
+  </div>
+
+  <!-- JavaScript here -->
+
+</body>
+<!-- <div id="graph2" style=></div>
+<div id="graph3" style=></div> -->
 </html> 

@@ -121,213 +121,135 @@ def moving_average(json_data):
 
     return x,smoothed_wave1,smoothed_wave2
 
+async def server_logic(websocket, path):
+    data_generation_task = None
+    data_points = []
+    collect_data = False  # Flag to start/stop collecting data
+    collected_data = []  # Store collected data
+    async def start_data_generation():
+        nonlocal data_generation_task, collect_data, collected_data
+        max_collect_points = 1000  # Number of points to collect
 
-async def handler(websocket, path):
-    x = 0
-    y = 0
+        i = 0
+        time_step = 0
+        x = 0
+        y = 0
 
-    Edne_byte = ['45', '6e', '64', '65']
-    temp = []
+        Edne_byte = ['45', '6e', '64', '65']
+        temp = []
 
-    global temp_len
-    i = 0
-    x = 0
-    temp_len = 212
-    data_set = read_data('signal1.txt')
-    data_set_2 = read_data('signal2.txt')
-    data_append = []
-    data_points =[]
-    data_x = []
-    data_y1 = []
-    data_y2 = []
-    peak1 = []
-    peak2 = []
-    window_size = 15
+        global temp_len
+        i = 0
+        x = 0
+        temp_len = 212
+        data_set_x = read_data('time.txt')
+        data_set = read_data('shifted_fbg2_data.txt')
+        data_set_2 = read_data('FBG2_part.txt')
+        data_append = []
+        data_points =[]
+        data_x = []
+        data_y1 = []
+        data_y2 = []
+        peak1 = []
+        peak2 = []
+        window_size = 15
 
-    
 
-    a = await websocket.recv()
-
-    if a == 'start':
-            # sent
         while True:
             # buffer = uart.read(1)
             buffer = data_set[i]
             buffer_2 = data_set_2[i]
+            buffer_x = data_set_x[i]
             
+            i = i + 1
+
+            data_element_x = buffer_x
             data_element = buffer
             data_element_2 = buffer_2
 
             # x_point = x[i]  # Get new data point in real-time
             y1_point = data_element
             y2_point = data_element_2
-        
-            # temp.append(data_element)
-            # d = {'x': x, 'y1': y1_point, 'y2':y2_point}
-            # print(type(y1_point))
             x = x+0.01
-            data_x.append(x)
-            data_y1.append(y1_point)
-            data_y2.append(y2_point)
-            # print(type())
             
 
-            if len(data_x) == 100:
+            d = {'x':x , 'y1': y1_point,'y2':y2_point}
 
-                #  moving average
-                signal1_series = pd.Series(data_y1)
-                smoothed_wave1 = signal1_series.rolling(window=window_size,min_periods=1).mean()
-                smoothed_wave1 = smoothed_wave1.values
-                signal2_series = pd.Series(data_y2)
-                smoothed_wave2 = signal2_series.rolling(window=window_size,min_periods=1).mean()
-                smoothed_wave2 = smoothed_wave2.values
-                data_y1 = smoothed_wave1
-                data_y2 = smoothed_wave2
-
-                #  Second Derivative
-                second_derivative1 = np.gradient(np.gradient(data_y1, data_x), data_x[1] - data_x[0])
-                second_derivative2 = np.gradient(np.gradient(data_y2, data_x), data_x[1] - data_x[0])
-
-                sos = signal.butter(2, 5, 'lp', fs=100, output='sos')
-                filtered_diffSignal1 = signal.sosfilt(sos, second_derivative1)
-                filtered_diffSignal2 = signal.sosfilt(sos, second_derivative2)
-
-                # find peak
-                indices_1  = find_peaks(filtered_diffSignal1, distance=100)[0]
-                indices_2  = find_peaks(filtered_diffSignal2, distance=100)[0]
-                # print(filtered_diffSignal1[indices_1][0])
-                # print(len(indices_1), len(indices_2))
-                
-
-                for j in range(0,len(data_x)):
-                    # if (j%10 == 0) and (j != 0):
-                    #     peak1.append(filtered_diffSignal1[indices_1])
-                    #     peak2.append(filtered_diffSignal2[indices_2])
-                    # else:   
-                    #     peak1.append(np.nan)
-                    #     peak2.append(np.nan)
-
-                    # d = {'x': str(data_x[j]), 'y1': str(data_y1 [j]), 'y2':str(data_y2[j]),'dy1':str(filtered_diffSignal1[j]),'dy2':str(filtered_diffSignal2[j])}
-
-                    # print(filtered_diffSignal1[indices_1],filtered_diffSignal2[indices_2])
+            data_append.append(d)
+            # print(d)
+                # self.sendMessage('\n')
+            if len(data_append) == 10:
+                    # data = json.dumps(data_append)
+                    data = json.dumps({'type': 'regular', 'data': data_append})
+                    
+                    await websocket.send(data)
                     
                     
-                    # d = {'x': str(data_x[j]), 'y1': str(data_y1 [j]), 'y2':str(data_y2[j]),'dy1':str(filtered_diffSignal1[j]),'dy2':str(filtered_diffSignal2[j]),'p1':str((filtered_diffSignal1[indices_1][0])),'p2':str(filtered_diffSignal2[indices_2][0]),'time':str(data_x[indices_1[0]]-data_x[indices_2[0]])}
-                    # d = {'x': str(data_x[j]), 'y1': str(data_y1 [j]), 'y2':str(data_y2[j]),'dy1':str(filtered_diffSignal1[j]),'dy2':str(filtered_diffSignal2[j])}
-                    d = {'x': str(data_x[j]), 'y1': str(data_y1 [j]), 'y2':str(data_y2[j]),'dy1':str(filtered_diffSignal1[j]),'dy2':str(filtered_diffSignal2[j])}
-                    data_points.append(d)
-                    # print(j)
-                    aa = 11
-                    if (j%aa == 0) and (j != 0):
-
-                        if (j == 99):
-                            d['p1']=str(filtered_diffSignal1[indices_1][0])
-                            d['p2']=str(filtered_diffSignal2[indices_2][0])
-                            d['px1']=str(data_x[indices_1[0]])
-                            d['px2']=str(data_x[indices_2[0]])
-                            d['time']=str(data_x[indices_1[0]]-data_x[indices_2[0]])
-                            data_points.append(d)
-                        json_data = json.dumps(data_points[((j%aa)-1)*aa:((j%aa)*aa)-1])
-                        # print(json_data)
-                        # print(data_points[((j%aa)-1)*aa:((j%aa)*aa)-1])
-                        await websocket.send(json_data)
-                        # print(json_data)
-                data_x = []
-                data_y1 = []
-                data_y2 = []
-
-            i = i+1
-
-            if i == len(data_set):
-                break
-
-            # data = json.dumps(d)
-
+                    await asyncio.sleep(0.1)
+                    # print(data)
+                    data_append = []
+                        
+            if collect_data:
                 
-            # self.sendMessage('\n')
-            # if len(data_append) == 10:
-            #         data = json.dumps(data_append)
+                data_x.append(x)
+                data_y1.append(y1_point)
+                data_y2.append(y2_point)
+
+                if len(data_x) >= max_collect_points:
+
+
+                    
                     
 
+                    window_size = 10
+                    signal1_series = pd.Series(data_y1)
+                    smoothed_wave1 = signal1_series.rolling(window=window_size,min_periods=1).mean()
+                    smoothed_wave1 = smoothed_wave1.values
 
-            #         await websocket.send(data)
-            #         # await asyncio.sleep(1)
-            #         # print(data)
-            #         data_append = []
+                    signal1_series = pd.Series(data_y2)
+                    smoothed_wave2 = signal1_series.rolling(window=window_size,min_periods=1).mean()
+                    smoothed_wave2 = smoothed_wave2.values
 
-            # if i == len(data_set):
-            #     break
-            # self.sendMessage(data_element)
-            
-            # if(len(temp) ==temp_len) and (temp[temp_len-4:temp_len] == Edne_byte):
-                
-            #     Wavelength, Intensity, Configure = data_sperate(temp)
-            #     sort_byte_WL = byte_sort(Wavelength)
+                    for j in range(0,len(data_x)):
+                        dd = {'x': str(data_x[j]), 'dy1':str(smoothed_wave1[j]),'dy2':str(smoothed_wave2[j])}
+                        collected_data.append(dd)
+                    data_x = []
+                    data_y1 = []
+                    data_y2 = []
 
-            #     # ------------ 3. Hexideciamal to Integral 
-            #     int32_t_WL = data_hex_to_int32(sort_byte_WL)/10000            
-
-            #     int32_ele = int32_t_WL[9]
-            #     print('---------waveleng_centre (nm)',int32_ele)
-
-            #     # ------------ 4. Wavelength Shift Calculation
-            #     int32_t_WL_shift = wavelength_shift(int32_ele)
-
-            #     int32_t_WL_shift = round(int32_t_WL_shift,6)
-            #     print('---------int32_WL_shift(nm)', int32_t_WL_shift)
-                
-
-            #     temp = []
-            #     end_time = time.time()
-            #     total = round(end_time - start_time, 3)
-                
-
-            #     d = {'x':total , 'y': int32_t_WL_shift}
-            #     # data = json.dumps(d)
-
-            #     data_append.append(d)
-
-            #     print('---------total seconds', total)
-                
-            #     # self.sendMessage('\n')
-            #     if len(data_append) == 10:
-            #         data = json.dumps(data_append)
-            #         await websocket.send(data)
-            #         # await asyncio.sleep(1)
-            #         print(data)
-            #         data_append = []
+                    collected_data_json = json.dumps({'type': 'collected', 'data': collected_data})
+                    await websocket.send(collected_data_json)  
                     
-
-                
-            #     # b = await websocket.recv()
-            #     # if b == 'stop':
-            #     #     print('disconnected')
-            #     #     await websocket.close()
-            #     # cnt = cnt+1
-            #     # break
-            # if (len(temp) ==temp_len) and (temp[temp_len-4:temp_len] != Edne_byte):
-            #     temp = temp[1:]
-
-
-        # a = await websocket.recv()
-        # print(a)
-        # if a == 'stop':
-        #     print('disconnected')
-        # x = x + 1
-        # y = y + 0.1
-        # d = {'x':x , 'y': y}
-        # data = json.dumps(d)
+                    print(collected_data)
+                    print(len(collected_data))
+                    collect_data = False  # Reset flag
+                    collected_data = []  # Reset collected data
         
+            if i == len(data_set):
+                i = 0
 
-        # await websocket.send(data)
-        # await websocket.send('\n')
 
-    # except websocket.recv() == 'stop':
-    #     print('disconnected')
-    #     await websocket.close()
+    async for message in websocket:
+        if message == "start":
+            print(message)
+            if not data_generation_task or data_generation_task.done():
+                data_generation_task = asyncio.create_task(start_data_generation())
+        if message == "collect":
+            print(message)
+            collect_data = True
+            collected_data = []  # Reset collected data when starting new collection
+        elif message == "stop":
+            print(message)
+            # if data_generation_task and not data_generation_task.done():
+            #     data_generation_task.cancel()
+            #     await data_generation_task
+        elif message == "disconnect":
+            print(message)
+            break
+
 
 async def main():
-    async with websockets.serve(handler, "0.0.0.0", 8001):
+    async with websockets.serve(server_logic, '0.0.0.0', 8001):
         await asyncio.Future()  
 
 if __name__ == '__main__':
