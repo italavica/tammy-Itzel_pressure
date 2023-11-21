@@ -18,6 +18,7 @@ def read_data(file_name):
     data_list = []
 
     with open(file_name, "r") as file:
+        bjhb=1
         data_string = file.read()
         data_list = data_list = data_string.split()
 
