@@ -78,8 +78,6 @@ function handleRegularData(data) {
 
       for (i = 0; i < data.length; i++) {
           // Add new data to complete dataset arrays
-          // display(payload.type)
-          // display('\n')
           xx.push(data[i].x);
           yy.push(data[i].y1);
           zz.push(data[i].y2);
@@ -112,28 +110,57 @@ function handleCollectedData(data)
     display(data.length);
     display(' data');
     display('\n');
+
+    
+    const keyToCheck1 = 'py1';
+    const keyToCheck2 = 'py2';
   if (shouldUpdate) {
     for (i = 0; i < data.length; i++) {
         dxx.push(data[i].x);
         dyy.push(data[i].dy1);
         dzz.push(data[i].dy2);
 
-
-
-              // Add new data to display arrays
+        const dictionary = data[i];
+        if (dictionary.hasOwnProperty(keyToCheck1)) {
+        peak_x1.push(data[i].x)
+        peak1.push(data[i].py1)
+        display_peak1_x.push(data[i].x)
+        display_peak1.push(data[i].py1)
+        }
+        if (dictionary.hasOwnProperty(keyToCheck2)) {
+        peak_x2.push(data[i].x)
+        peak2.push(data[i].py2)
+        display_peak2_x.push(data[i].x)
+        display_peak2.push(data[i].py2)
+        }
+        // Add new data to display arrays
         display_dxx.push(data[i].x);
         display_dyy.push(data[i].dy1);
         display_dzz.push(data[i].dy2);
+        
 
-                  // Ensure display arrays don't exceed 1000 elements
-            if (display_dxx.length > 1000) {
-            display_dxx.shift();
-            display_dyy.shift();
-            display_dzz.shift();
-          }
 }
 // Update the plot with the new data
-Plotly.update('collectedDataGraph', {x: [display_dxx], y: [display_dyy, display_dzz]});
+peak1_len = display_peak1_x.length
+peak2_len = display_peak2_x.length
+Plotly.update('collectedDataGraph', {x: [display_dxx,display_dxx,display_peak1_x,display_peak2_x], y: [display_dyy, display_dzz,display_peak1,display_peak2]});
+
+for (let i = 0; i < peak1_len; i++) {
+  display_peak1_x.shift();
+  display_peak1.shift();
+}
+
+for (let i = 0; i < peak2_len; i++) {
+  display_peak2_x.shift();
+  display_peak2.shift();
+}
+
+for (let i = 0; i < data.length; i++) {
+  display_dxx.shift();
+  display_dyy.shift();
+  display_dzz.shift();
+}
+
 }
 }
 
@@ -142,6 +169,7 @@ Plotly.update('collectedDataGraph', {x: [display_dxx], y: [display_dyy, display_
     // Display the given text
   function array_init()
   {
+    cnt = 0;
     xx=[];
     peak_x1 = [];
     peak_x2 = [];
@@ -159,6 +187,10 @@ Plotly.update('collectedDataGraph', {x: [display_dxx], y: [display_dyy, display_
     display_dxx = [];
     display_dyy = [];
     display_dzz = [];
+    display_peak1_x = [];
+    display_peak2_x = [];
+    display_peak1 = [];
+    display_peak2 = [];
     
   }
 
@@ -280,17 +312,17 @@ var trace_pr2 = {
 };
 
 var trace_p1 = {
-  x: [1, 2, 3, 4],
-  y: [10, 15, 13, 17],
-  name: 'Wrist Signal Peak',
+  x: [],
+  y: [],
+  name: 'FBG1 Peak',
   yaxis: 'y',
   mode: 'markers'
 };
 
 var trace_p2 = {
-  x: [1, 2, 3, 4],
-  y: [10, 15, 13, 17],
-  name: 'Elbow Signal Peak',
+  x: [],
+  y: [],
+  name: 'FBG2 Peak',
   yaxis: 'y2',
   mode: 'markers'
 };
@@ -305,7 +337,7 @@ var ptt0 = {
 
 
 var data = [trace1, trace2];
-var proc_data = [trace_pr1, trace_pr2];
+var proc_data = [trace_pr1, trace_pr2,trace_p1,trace_p2];
 var data2 = [trace1, trace2, trace_p1, trace_p2];
 var data3 = [ptt0];
 
@@ -355,9 +387,9 @@ var layout3 = {
   }
 
 
-  function download_wavelength(xx,yy,zz,dyy,dzz){
+  function download_wavelength(xx,yy,zz){
  // define the heading for each row of the data
- var csv = 'time,wavelength_shift_1,wavelength_shift_2,SecondDev_1,SecondDev_2\n';
+ var csv = 'time,wavelength_shift_1,wavelength_shift_2\n';
  
     for (let i = 0; i < yy.length; i++) {
     csv += xx[i];
@@ -365,10 +397,6 @@ var layout3 = {
     csv += yy[i];
     csv += ",";
     csv += zz[i];
-    csv += ",";
-    csv += dyy[i];
-    csv += ",";
-    csv += dzz[i];
     csv+="\n";
     }
  
@@ -383,11 +411,17 @@ var layout3 = {
 
  }
 
- function download_PTT(peak_x1,peak1,peak_x2,peak2,ptt){
+ function download_PTT(display_dxx,display_dyy,display_dzz,peak_x1,peak1,peak_x2,peak2){
  // define the heading for each row of the data
- var csv = 'peak1_time,peak1,peak2_time,peak2,ptt\n';
+ var csv = 'time,peak_data1, peak_data2, peak1_x,peak1_y, peak2_x, peak2_y\n';
  
-    for (let i = 0; i < peak_x1.length; i++) {
+    for (let i = 0; i < display_dxx.length; i++) {
+    csv += display_dxx[i];
+    csv += ",";
+    csv += display_dyy[i];
+    csv += ",";
+    csv += display_dzz[i];
+    csv += ",";
     csv += peak_x1[i];
     csv += ",";
     csv += peak1[i];
@@ -395,8 +429,6 @@ var layout3 = {
     csv += peak_x2[i];
     csv += ",";
     csv += peak2[i];
-    csv += ",";
-    csv += ptt[i];
     csv+="\n";
     }
  
@@ -415,8 +447,6 @@ var layout3 = {
 
     websock.send('collect');
     Plotly.newPlot('collectedDataGraph', proc_data, layout2);
-    // websock.send('stop');
-    //shouldUpdate = false;  
     display('Processing data...')
     // sock_message_collect(evt)
    
@@ -436,8 +466,8 @@ var layout3 = {
         <input type="button" class="button" value="Start" onClick="start();">
         <input type="button" class="button" value="Stop" onClick="stop();">
         <input type="button" class="button" value="Process Data" onClick="collectData();">
-        <button class="button delayed" onclick="download_wavelength(xx,yy,zz,dyy,dzz)"> Download FBG Signals </button>
-        <button class="button delayed" onclick="download_PTT(peak_x1,peak1,peak_x2,peak2,ptt)"> Download PTT Signals </button>
+        <button class="button delayed" onclick="download_wavelength(xx,yy,zz)"> Download FBG Signals </button>
+        <button class="button delayed" onclick="download_PTT(display_dxx,display_dyy,display_dzz,peak_x1,peak1,peak_x2,peak2)"> Download Peak Signals </button>
       </div>
     </form>
     <div id="graph"></div>

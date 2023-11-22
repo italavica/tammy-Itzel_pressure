@@ -205,53 +205,43 @@ async def server_logic(websocket, path):
                     signal1_series = pd.Series(data_y1)
                     smoothed_wave1 = signal1_series.rolling(window=window_size,min_periods=1).mean()
                     smoothed_wave1 = smoothed_wave1.values
-                    peak1 = R_peak_detect(-smoothed_wave1,20,plot=False)
-                    print('peaks:',peak1)
+                    smoothed_wave1 = -smoothed_wave1
+                    peak1 = R_peak_detect(smoothed_wave1,20,plot=False)
+                    print('index1:',peak1)
+                    print('peaks:',len(peak1))
 
                     signal2_series = pd.Series(data_y2)
                     # peak2 = R_peak_detect(signal2_series,20,plot=False)
                     smoothed_wave2 = signal2_series.rolling(window=window_size,min_periods=1).mean()
                     smoothed_wave2 = smoothed_wave2.values
-                    peak2 = R_peak_detect(-smoothed_wave2,20,plot=False)
-                    print('peaks:',peak2)
+                    smoothed_wave2 = -smoothed_wave2
+                    peak2 = R_peak_detect(smoothed_wave2,20,plot=False)
+                    print('index2:',peak2)
+                    print('peaks:',len(peak2))
 
                     index1=0
                     index2=0
                     procesed_data=0
                     for j in range(0,len(data_x)):
+                        dd = {'x': str(data_x[j]), 'dy1':str(smoothed_wave1[j]),'dy2':str(smoothed_wave2[j])}
 
+                        if index1 == len(peak1):
+                            pass
+                        elif peak1[index1]==j and index1 != len(peak1):     
+                            dd['py1']=str(smoothed_wave1[peak1[index1]])
+                            print('py1',dd['py1'])                          
+                            index1+=1
+                            print('in index1',index1)
 
-                        # if  index2 == len(peak2):
-                        #         dd = {'x': str(data_x[j]), 'dy1':str(smoothed_wave1[j]),'dy2':str(smoothed_wave2[j])}
-                        #         collected_data.append(dd)
-                        #         # procesed_data+=1
-                        # elif  index1 == len(peak1):
-                        #         dd = {'x': str(data_x[j]), 'dy1':str(smoothed_wave1[j]),'dy2':str(smoothed_wave2[j])}
-                        #         collected_data.append(dd)
-                        #         # procesed_data+=1
-
+                        if index2 == len(peak2):
+                            pass
+                        elif peak2[index2]==j and index2 != len(peak2):     
+                            dd['py2']=str(smoothed_wave2[peak2[index2]])     
+                            print('py2',dd['py2'])                        
+                            index2+=1
+                            print('in index2',index2)
                         
-                        if index2 != len(peak2) and index1 != len(peak1):
-                            # if smoothed_wave1[peak1[index1]]==smoothed_wave1[j] and peak1[index1]==j:
-                            if peak1[index1]==j:                               
-                                dd = {'x': str(data_x[j]), 'dy1':str(smoothed_wave1[j]),'dy2':str(smoothed_wave2[j]),'py1':str(peak1[index1])}
-                                collected_data.append(dd)
-                                procesed_data+=1
-                                index1+=1
-
-                            # if smoothed_wave2[peak2[index2]]==smoothed_wave2[j] and peak2[index2]==j:
-                            if peak2[index2]==j:                             
-                                dd = {'x': str(data_x[j]), 'dy1':str(smoothed_wave1[j]),'dy2':str(smoothed_wave2[j]),'py2':str(peak2[index2])}
-                                collected_data.append(dd)
-                                procesed_data+=1
-                                index2+=1
-
-                            else:
-                                dd = {'x': str(data_x[j]), 'dy1':str(smoothed_wave1[j]),'dy2':str(smoothed_wave2[j])}
-                                collected_data.append(dd)
-                                procesed_data+=1
-                    print(procesed_data)
-
+                        collected_data.append(dd)
 
                     data_x = []
                     data_y1 = []
